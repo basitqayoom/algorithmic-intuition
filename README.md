@@ -4,6 +4,10 @@
 
 # Run and deploy your AI Studio app
 
+## What is this app about?
+
+A framework for deriving algorithms from first principles using brute force analysis, state identification, invariants, events, and data structures. This app helps you understand and build algorithms by breaking them down into fundamental components and analyzing their behavior systematically.
+
 This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/be591983-ac8b-4ef0-85ce-c7bcef52782c
