@@ -56,6 +56,22 @@ export default function App() {
   const [customDesc, setCustomDesc] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
+
+  // Fetch pre-configured API key from server environment on mount
+  useEffect(() => {
+    fetch('/api/config')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load server config');
+        return res.json();
+      })
+      .then((data) => {
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        }
+      })
+      .catch((err) => console.warn('No pre-configured server environment API key:', err));
+  }, []);
 
   // Sandbox Practice Notes
   // Keyed by sheet ID so that users don't lose practice notes when switching problems!
@@ -149,7 +165,8 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           problemTitle: customTitle,
-          problemDescription: customDesc
+          problemDescription: customDesc,
+          apiKey: apiKey
         })
       });
 
@@ -395,6 +412,24 @@ export default function App() {
                 </div>
 
                 <form onSubmit={handleAISubmission} className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-300">
+                        Gemini API Key
+                      </label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {apiKey ? '✓ Configured' : 'Optional (if set in server env)'}
+                      </span>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="Enter custom GEMINI_API_KEY (overrides environment if provided)"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                       Problem Title <span className="text-rose-400">*</span>

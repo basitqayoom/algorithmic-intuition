@@ -38,15 +38,34 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
+// Endpoint to retrieve server-side configuration (specifically the pre-filled Gemini API key)
+app.get("/api/config", (req, res) => {
+  return res.json({
+    apiKey: process.env.GEMINI_API_KEY || ""
+  });
+});
+
 // Endpoint to generate DSA Thinking Framework sheet
 app.post("/api/generate", async (req, res) => {
   try {
-    const { problemTitle, problemDescription } = req.body;
+    const { problemTitle, problemDescription, apiKey: clientApiKey } = req.body;
     if (!problemTitle) {
       return res.status(400).json({ error: "Problem title is required." });
     }
 
-    const ai = getGeminiClient();
+    let ai: GoogleGenAI;
+    if (clientApiKey && clientApiKey.trim()) {
+      ai = new GoogleGenAI({
+        apiKey: clientApiKey.trim(),
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+    } else {
+      ai = getGeminiClient();
+    }
     
     const systemPrompt = `You are a world-class algorithms coach and computer science professor specializing in LeetCode, technical interviews, and the "DSA THINKING FRAMEWORK".
 Your task is to analyze the user's algorithmic problem and populate the DSA Thinking Framework sheet.
