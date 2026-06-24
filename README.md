@@ -46,6 +46,12 @@ Efficient Algorithm
 
 ---
 
+## Try the Demo
+
+View and interact with the framework: https://ai.studio/apps/be591983-ac8b-4ef0-85ce-c7bcef52782c
+
+---
+
 ## Installation & Setup
 
 **Prerequisites:** Node.js
