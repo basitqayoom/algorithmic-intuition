@@ -48,7 +48,7 @@ Efficient Algorithm
 
 ## Try the Demo
 
-View and interact with the framework: https://ai.studio/apps/be591983-ac8b-4ef0-85ce-c7bcef52782c
+View and interact with the framework: https://6a3c1f27c1f76276a77fd9e9--algorithm-intuition.netlify.app/
 
 ---
 
