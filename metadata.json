@@ -1,0 +1,6 @@
+{
+  "name": "DSA Thinking Framework",
+  "description": "An interactive solver, study worksheet, and print-perfect A4 portrait cheat sheet based on the State-Invariant-Event DSA thinking methodology.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

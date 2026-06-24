@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Print optimizations */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide interactive/editing UI elements on print */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Force clean pages and prevent background clipping */
+  .print-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm 15mm !important;
+    margin: 0 auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Monospace fonts look perfect on print */
+  pre, code, .mono-text {
+    font-family: "JetBrains Mono", monospace !important;
+  }
+}
