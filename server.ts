@@ -48,7 +48,7 @@ app.get("/api/config", (req, res) => {
 // Endpoint to generate DSA Thinking Framework sheet
 app.post("/api/generate", async (req, res) => {
   try {
-    const { problemTitle, problemDescription, apiKey: clientApiKey } = req.body;
+    const { problemTitle, problemDescription, apiKey: clientApiKey, customRestriction } = req.body;
     if (!problemTitle) {
       return res.status(400).json({ error: "Problem title is required." });
     }
@@ -67,7 +67,7 @@ app.post("/api/generate", async (req, res) => {
       ai = getGeminiClient();
     }
     
-    const systemPrompt = `You are a world-class algorithms coach and computer science professor specializing in LeetCode, technical interviews, and the "DSA THINKING FRAMEWORK".
+    let systemPrompt = `You are a world-class algorithms coach and computer science professor specializing in LeetCode, technical interviews, and the "DSA THINKING FRAMEWORK".
 Your task is to analyze the user's algorithmic problem and populate the DSA Thinking Framework sheet.
 
 Follow these 9 core steps exactly:
@@ -82,6 +82,10 @@ Follow these 9 core steps exactly:
 9. CHOOSE THE DATA STRUCTURE: Select the data structure that maintains the state + invariant.
 
 Also generate the master formula trace string, 30-second checklist answers, and a clean, fully-commented TypeScript implementation of the efficient algorithm.`;
+
+    if (customRestriction && customRestriction.trim()) {
+      systemPrompt += `\n\nCRITICAL CONSTRAINTS & INSTRUCTIONS FROM USER:\n${customRestriction.trim()}`;
+    }
 
     const userPrompt = `Problem Name: "${problemTitle}"
 Description: ${problemDescription || "Analyze this problem name and output the perfect optimal solution."}

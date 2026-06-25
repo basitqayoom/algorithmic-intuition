@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PRESET_SHEETS } from './presets';
 import { A4Sheet } from './components/A4Sheet';
+import { SlideView } from './components/SlideView';
 import { DSASheetData } from './types';
 import { GoogleGenAI, Type } from '@google/genai';
 import { 
@@ -20,15 +21,18 @@ import {
   ChevronRight,
   Info,
   Cpu,
-  AlertTriangle
+  AlertTriangle,
+  Maximize2,
+  Minimize2,
+  LayoutGrid
 } from 'lucide-react';
 
-const generateClientSide = async (problemTitle: string, problemDescription: string, clientApiKey: string) => {
+const generateClientSide = async (problemTitle: string, problemDescription: string, clientApiKey: string, customRestriction?: string) => {
   const ai = new GoogleGenAI({
     apiKey: clientApiKey,
   });
 
-  const systemPrompt = `You are a world-class algorithms coach and computer science professor specializing in LeetCode, technical interviews, and the "DSA THINKING FRAMEWORK".
+  let systemPrompt = `You are a world-class algorithms coach and computer science professor specializing in LeetCode, technical interviews, and the "DSA THINKING FRAMEWORK".
 Your task is to analyze the user's algorithmic problem and populate the DSA Thinking Framework sheet.
 
 Follow these 9 core steps exactly:
@@ -43,6 +47,10 @@ Follow these 9 core steps exactly:
 9. CHOOSE THE DATA STRUCTURE: Select the data structure that maintains the state + invariant.
 
 Also generate the master formula trace string, 30-second checklist answers, and a clean, fully-commented TypeScript implementation of the efficient algorithm.`;
+
+  if (customRestriction && customRestriction.trim()) {
+    systemPrompt += `\n\nCRITICAL CONSTRAINTS & INSTRUCTIONS FROM USER:\n${customRestriction.trim()}`;
+  }
 
   const userPrompt = `Problem Name: "${problemTitle}"
 Description: ${problemDescription || "Analyze this problem name and output the perfect optimal solution."}
@@ -260,6 +268,9 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
+  const [customRestriction, setCustomRestriction] = useState<string>('');
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [viewLayout, setViewLayout] = useState<'sheet' | 'slides'>('sheet');
 
   // Fetch pre-configured API key from server environment on mount
   useEffect(() => {
@@ -278,6 +289,17 @@ export default function App() {
         }
       })
       .catch((err) => console.warn('Pre-configured server config fetch omitted (server booting/restarting):', err.message || err));
+  }, []);
+
+  // Listen for Escape key to exit full screen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullScreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Sandbox Practice Notes
@@ -376,7 +398,8 @@ export default function App() {
           body: JSON.stringify({
             problemTitle: customTitle,
             problemDescription: customDesc,
-            apiKey: apiKey
+            apiKey: apiKey,
+            customRestriction: customRestriction
           })
         });
 
@@ -397,7 +420,7 @@ export default function App() {
         // If they entered a custom API key, fall back to direct browser-side generation
         if (apiKey && apiKey.trim()) {
           console.info('Attempting direct client-side fallback generation via Gemini API...');
-          data = await generateClientSide(customTitle, customDesc, apiKey.trim());
+          data = await generateClientSide(customTitle, customDesc, apiKey.trim(), customRestriction);
         } else {
           // If no custom API key is available
           if (fetchErr.message === 'NOT_JSON_RESPONSE') {
@@ -686,6 +709,31 @@ export default function App() {
                       onChange={(e) => setCustomDesc(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono"
                     />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-300">
+                        AI Constraints & Guardrails (Optional)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCustomRestriction("Do not write the solution code directly. Only provide step-by-step logic, high-level structural hints, and return placeholder explanations inside the codeSnippet block instead of fully working code.")}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
+                      >
+                        Shortcut: No direct code solution
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. 'Do not write the solution', 'Withhold the final code', 'Return only conceptual flowcharts'"
+                      value={customRestriction}
+                      onChange={(e) => setCustomRestriction(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Directly shapes Gemini generation behaviour, letting you prevent it from spoiling code solutions.
+                    </p>
                   </div>
 
                   {errorMsg && (
@@ -1201,21 +1249,61 @@ export default function App() {
                   <option value="lg">Spacious (LG)</option>
                 </select>
               </div>
+
+              {/* Layout Style Selector */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Layout Style</span>
+                <div className="bg-slate-900 p-0.5 rounded-lg border border-slate-800 flex">
+                  <button
+                    onClick={() => setViewLayout('sheet')}
+                    className={`px-3 py-1 rounded-md font-semibold text-[11px] transition-all cursor-pointer flex items-center gap-1 ${
+                      viewLayout === 'sheet' 
+                        ? 'bg-indigo-600 text-white shadow' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>A4 Sheet</span>
+                  </button>
+                  <button
+                    onClick={() => setViewLayout('slides')}
+                    className={`px-3 py-1 rounded-md font-semibold text-[11px] transition-all cursor-pointer flex items-center gap-1 ${
+                      viewLayout === 'slides' 
+                        ? 'bg-indigo-600 text-white shadow' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Slides</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Scale Slider */}
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-[11px]">Zoom:</span>
-              <input
-                type="range"
-                min="0.5"
-                max="1.2"
-                step="0.05"
-                value={scale}
-                onChange={(e) => setScale(parseFloat(e.target.value))}
-                className="w-20 accent-indigo-500 cursor-pointer"
-              />
-              <span className="text-[10px] font-mono text-slate-400 w-8">{(scale * 100).toFixed(0)}%</span>
+            {/* Scale Slider & Full Screen Toggle */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 text-[11px]">Zoom:</span>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.2"
+                  step="0.05"
+                  value={scale}
+                  onChange={(e) => setScale(parseFloat(e.target.value))}
+                  className="w-20 accent-indigo-500 cursor-pointer"
+                />
+                <span className="text-[10px] font-mono text-slate-400 w-8">{(scale * 100).toFixed(0)}%</span>
+              </div>
+
+              <button
+                onClick={() => setIsFullScreen(true)}
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white py-1.5 px-3 rounded-lg font-medium text-[11px] transition-all cursor-pointer shadow-sm border border-indigo-500/30"
+                title="Open sheet in immersive full screen"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>Full Screen</span>
+              </button>
             </div>
           </div>
 
@@ -1230,26 +1318,39 @@ export default function App() {
           {/* Scale container wrapping the Sheet */}
           <div 
             className="w-full flex justify-center overflow-x-auto p-4 bg-slate-950 rounded-2xl border border-slate-800/60 shadow-inner"
-            style={{ minHeight: '800px' }}
+            style={{ minHeight: '600px' }}
           >
-            <div 
-              style={{ 
-                transform: `scale(${scale})`, 
-                transformOrigin: 'top center',
-                width: '100%',
-                maxWidth: '850px'
-              }}
-              className="origin-top"
-            >
-              <A4Sheet
-                data={currentSheet}
-                sandboxNotes={activeSandboxNotes}
-                mode={mode}
-                theme={theme}
-                fontSize={fontSize}
-                showLineNumbers={showLineNumbers}
-              />
-            </div>
+            {viewLayout === 'sheet' ? (
+              <div 
+                style={{ 
+                  transform: `scale(${scale})`, 
+                  transformOrigin: 'top center',
+                  width: '100%',
+                  maxWidth: '850px'
+                }}
+                className="origin-top font-sans"
+              >
+                <A4Sheet
+                  data={currentSheet}
+                  sandboxNotes={activeSandboxNotes}
+                  mode={mode}
+                  theme={theme}
+                  fontSize={fontSize}
+                  showLineNumbers={showLineNumbers}
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-4xl flex justify-center font-sans">
+                <SlideView
+                  data={currentSheet}
+                  sandboxNotes={activeSandboxNotes}
+                  mode={mode}
+                  theme={theme}
+                  fontSize={fontSize}
+                  showLineNumbers={showLineNumbers}
+                />
+              </div>
+            )}
           </div>
 
         </div>
@@ -1267,6 +1368,184 @@ export default function App() {
           showLineNumbers={showLineNumbers}
         />
       </div>
+
+      {/* 4. Full Screen Overlay View */}
+      {isFullScreen && (
+        <div className="fixed inset-0 bg-slate-950/95 z-50 overflow-y-auto flex flex-col p-6 items-center no-print">
+          
+          {/* Controls Bar */}
+          <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-wrap gap-4 items-center justify-between text-xs mb-6 shadow-2xl sticky top-0 z-50">
+            <div className="flex items-center gap-2">
+              <Cpu className="text-indigo-400 w-5 h-5" />
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-tight">
+                  Full Screen Preview: <span className="text-indigo-400">{currentSheet.problemName}</span>
+                </h2>
+                <p className="text-[10px] text-slate-400">
+                  Press <kbd className="bg-slate-800 px-1 py-0.5 rounded border border-slate-700 font-mono text-slate-300">ESC</kbd> to exit full screen
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Preview Target */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Preview Target</span>
+                <div className="bg-slate-950 p-0.5 rounded-lg border border-slate-800 flex">
+                  <button
+                    onClick={() => setMode('reference')}
+                    className={`px-2.5 py-1 rounded-md font-medium text-[10px] transition-all cursor-pointer ${
+                      mode === 'reference' 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    AI Expert
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMode('sandbox');
+                    }}
+                    className={`px-2.5 py-1 rounded-md font-medium text-[10px] transition-all cursor-pointer flex items-center gap-1 ${
+                      mode === 'sandbox' 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Edit3 className="w-2.5 h-2.5" />
+                    <span>Sandbox</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Theme Selector */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Print theme style</span>
+                <select
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as any)}
+                  className="bg-slate-955 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 bg-slate-950 focus:outline-none"
+                >
+                  <option value="geometric-balance">Geometric Balance</option>
+                  <option value="tech-slate">Sleek Tech Slate</option>
+                  <option value="academic">Academic Handout (Pure Mono)</option>
+                  <option value="blueprint">Engineer Draft Blueprint</option>
+                </select>
+              </div>
+
+              {/* Font Size Selector */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Font Scale</span>
+                <select
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value as any)}
+                  className="bg-slate-955 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 bg-slate-950 focus:outline-none"
+                >
+                  <option value="xs">Dense (XS)</option>
+                  <option value="sm">Standard (SM)</option>
+                  <option value="base">Medium (MD)</option>
+                  <option value="lg">Spacious (LG)</option>
+                </select>
+              </div>
+
+              {/* Layout Style Selector */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Layout Style</span>
+                <div className="bg-slate-950 p-0.5 rounded-lg border border-slate-800 flex">
+                  <button
+                    onClick={() => setViewLayout('sheet')}
+                    className={`px-2 py-0.5 rounded font-medium text-[10px] transition-all cursor-pointer ${
+                      viewLayout === 'sheet' 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    A4 Sheet
+                  </button>
+                  <button
+                    onClick={() => setViewLayout('slides')}
+                    className={`px-2 py-0.5 rounded font-medium text-[10px] transition-all cursor-pointer ${
+                      viewLayout === 'slides' 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Slides
+                  </button>
+                </div>
+              </div>
+
+              {/* Zoom Slider */}
+              <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800/80">
+                <span className="text-slate-400 text-[10px]">Zoom:</span>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.05"
+                  value={scale}
+                  onChange={(e) => setScale(parseFloat(e.target.value))}
+                  className="w-16 accent-indigo-500 cursor-pointer"
+                />
+                <span className="text-[9px] font-mono text-slate-400 w-8">{(scale * 100).toFixed(0)}%</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white py-2 px-3 rounded-lg font-semibold text-[11px] shadow-md shadow-indigo-900/20 transition-all cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print</span>
+                </button>
+
+                <button
+                  onClick={() => setIsFullScreen(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 px-3 rounded-lg font-semibold text-[11px] transition-all cursor-pointer flex items-center gap-1 border border-slate-700"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span>Exit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Full Screen Sheet Stage */}
+          <div className="w-full max-w-5xl flex justify-center bg-slate-950 rounded-2xl border border-slate-800 p-8 shadow-inner overflow-x-auto min-h-[90vh] mb-8">
+            {viewLayout === 'sheet' ? (
+              <div 
+                style={{ 
+                  transform: `scale(${scale})`, 
+                  transformOrigin: 'top center',
+                  width: '100%',
+                  maxWidth: '850px'
+                }}
+                className="origin-top font-sans"
+              >
+                <A4Sheet
+                  data={currentSheet}
+                  sandboxNotes={activeSandboxNotes}
+                  mode={mode}
+                  theme={theme}
+                  fontSize={fontSize}
+                  showLineNumbers={showLineNumbers}
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-4xl flex justify-center font-sans">
+                <SlideView
+                  data={currentSheet}
+                  sandboxNotes={activeSandboxNotes}
+                  mode={mode}
+                  theme={theme}
+                  fontSize={fontSize}
+                  showLineNumbers={showLineNumbers}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
